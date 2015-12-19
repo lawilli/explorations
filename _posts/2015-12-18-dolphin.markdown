@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Dolphin"
-date:   2015-12-03 23:42:45
+date:   2015-12-18 23:42:45
 tags: dolphin emulator
 ---
 
@@ -36,34 +36,131 @@ Upon glance of the Dolphin Graphical User Interface (GUI), some controls are app
 * Pause/Play: Pauses/resumes emulation
 * Stop: Stops emulation
 
-Locating the code where the pause button label is set
+The code for setting these labels can be located by recursively searching the `Source\Core` directory for files containing pattern matches in which the text of the label is a pattern.
 
 {% highlight sh %}
-$ grep -rn \"Pause\" ../Source/
+$ grep -rl \"Pause\" .
 {% endhighlight %}
 
 The above command outputs all of the
 
 {% highlight text %}
-../Source//Core/DolphinQt/MainWindow.cpp:341:		m_ui->actionPlay->setText(tr("Pause"));
-../Source//Core/DolphinQt/MainWindow.cpp:342:		m_ui->actionPlay_mnu->setText(tr("Pause"));
-../Source//Core/DolphinWX/Debugger/DebuggerPanel.cpp:130:	m_pButtonPause = new wxButton(this, wxID_ANY, _("Pause"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _("Pause"));
-../Source//Core/DolphinWX/Debugger/DSPDebugWindow.cpp:47:	m_Toolbar->AddTool(ID_RUNTOOL, _("Pause"),
-../Source//Core/DolphinWX/Debugger/DSPDebugWindow.cpp:182:		m_Toolbar->SetToolLabel(ID_RUNTOOL, _("Pause"));
-../Source//Core/DolphinWX/FrameTools.cpp:1794:				PlayTool->SetLabel(_("Pause"));
-../Source//Core/DolphinWX/FrameTools.cpp:1795:				PlayTool->SetShortHelp(_("Pause"));
-../Source//Core/DolphinWX/WXInputBase.cpp:43:		case WXK_PAUSE:             return _("Pause");
+./DolphinQt/MainWindow.cpp
+./DolphinWX/Debugger/DebuggerPanel.cpp
+./DolphinWX/Debugger/DSPDebugWindow.cpp
+./DolphinWX/FrameTools.cpp
+./DolphinWX/WXInputBase.cpp
 {% endhighlight %}
 
+There are several files containing matches for the pattern `\"Pause\"`.
 
 {% highlight sh %}
-$ grep -rn \"FullScr\" ../Source/
+$ grep -rl \"FullScr\" .
 {% endhighlight %}
 
 
 {% highlight text %}
-../Source//Core/DolphinWX/FrameTools.cpp:552:	WxUtils::AddToolbarButton(ToolBar, IDM_TOGGLE_FULLSCREEN,   _("FullScr"),     m_Bitmaps[Toolbar_FullScreen],  _("Toggle Fullscreen"));
+./DolphinWX/FrameTools.cpp
 {% endhighlight %}
+
+There is one match for `./DolphinWX/FrameTools.cpp` which is also in the returned set for the pattern \"Pause\".
+
+
+The Dolphin emulator provides a feature for dumping the hexadecimal contents of emulated hardware virtual memory. When running in *debug* mode, the *Memory Window* portion of the GUI has buttons labeled
+
+* Dump MRAM
+
+* Dump EXRAM
+
+* Dump FakeVMEM
+
+{% highlight sh %}
+$ grep -rl \"Dump\ MRAM\" .
+{% endhighlight %}
+
+{% highlight sh %}
+./DolphinWX/Debugger/MemoryWindow.cpp
+{% endhighlight %}
+
+### MemoryWindow
+
+{% highlight cpp %}
+dump_sizer->Add(new wxButton(this, IDM_DUMP_MEMORY, _("Dump MRAM")), 0, wxEXPAND);
+{% endhighlight %}
+
+`IDM_DUMP_MEMORY` is an `enum` value, set in `MemoryWindow.cpp`.
+
+{% highlight cpp %}
+enum
+{
+    ...
+    IDM_SETVALBUTTON,
+    IDM_DUMP_MEMORY,
+    IDM_DUMP_MEM2,
+    IDM_DUMP_FAKEVMEM,
+    ...
+};
+{% endhighlight %}
+
+[Event Tables](https://wiki.wxwidgets.org/Events#Event_Tables)
+
+{% highlight cpp %}
+BEGIN_EVENT_TABLE(CMemoryWindow, wxPanel)
+    ...
+    EVT_BUTTON(IDM_SETVALBUTTON,    CMemoryWindow::SetMemoryValue)
+    EVT_BUTTON(IDM_DUMP_MEMORY,     CMemoryWindow::OnDumpMemory)
+    EVT_BUTTON(IDM_DUMP_MEM2,       CMemoryWindow::OnDumpMem2)
+    EVT_BUTTON(IDM_DUMP_FAKEVMEM,   CMemoryWindow::OnDumpFakeVMEM)
+    ...
+END_EVENT_TABLE()
+{% endhighlight %}
+
+{% highlight cpp %}
+void CMemoryWindow::OnDumpMemory( wxCommandEvent& event )
+{
+    // DumpArray(File::GetUserPath(F_RAMDUMP_IDX), Memory::m_pRAM, 8);
+    DumpArray(File::GetUserPath(F_RAMDUMP_IDX), Memory::m_pRAM, Memory::REALRAM_SIZE);
+}
+{% endhighlight %}
+
+`F_RAMDUMP_IDX` is an `enum` value defined in `Common/FileUtil.h`.
+
+{% highlight cpp %}
+// Source/Core/Common/FileUtil.h
+...
+enum {
+	...
+	F_RAMDUMP_IDX,
+	F_ARAMDUMP_IDX,
+	F_FAKEVMEMDUMP_IDX,
+    ...
+};
+{% endhighlight %}
+
+{% highlight c %}
+#include <execinfo.h>
+#include <stdio.h>
+    ...
+    void* callstack[128];
+    int i, frames = backtrace(callstack, 128);
+    char** strs = backtrace_symbols(callstack, frames);
+    for (i = 0; i < frames; ++i) {
+        printf("%s\n", strs[i]);
+    }
+    free(strs);
+    ...
+
+{% endhighlight %}
+
+
+
+
+
+
+
+
+
+
 
 
 {% highlight cpp %}
